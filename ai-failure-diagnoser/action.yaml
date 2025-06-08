@@ -1,5 +1,6 @@
 name: AI Failure Diagnoser
-desciription: ai failure diagnoser
+description: |
+  AI Failure Diagnoser
 inputs:
   github_token:
     description: 'GitHub token for authentication'
