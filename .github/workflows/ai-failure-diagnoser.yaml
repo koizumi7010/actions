@@ -1,0 +1,22 @@
+name: AI Failure Diagnoser
+
+on:
+  workflow_run:
+    workflows: ["trigger build workflow"]
+    types:
+      - completed
+
+jobs:
+    ai-failure-diagnoser:
+        runs-on: ubuntu-latest
+        if : ${{ github.event.workflow_run.conclusion == 'failure' }}
+        permissions:
+            actions: read
+            contents: read
+            models: read
+        steps:
+            - uses: actions/checkout@v4
+            - uses: aquaproj/aqua-installer@v2.1.1 # for github-comment
+              with:
+                aqua_version: v2.8.0
+            - uses: ./.github/actions/ai-failure-diagnoser
