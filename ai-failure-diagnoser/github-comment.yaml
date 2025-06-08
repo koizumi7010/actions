@@ -1,0 +1,6 @@
+post:
+  ai-failure-diagnoser:
+  - template: |
+      ## AI Failure Diagnoser Result
+      ### ワークフローの失敗を検出しました。考えられる原因と解決策を以下に示します。
+      {{ steps.ai_interface.outputs.response }}

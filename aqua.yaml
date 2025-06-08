@@ -1,0 +1,8 @@
+---
+# aqua - Declarative CLI Version Manager
+# https://aquaproj.github.io/
+registries:
+  - type: standard
+    ref: v4.166.0
+packages:
+  - name: suzuki-shunsuke/github-comment@v6.0.4

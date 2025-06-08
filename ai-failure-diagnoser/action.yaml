@@ -1,0 +1,67 @@
+name: AI Failure Diagnoser
+desciription: ai failure diagnoser
+inputs:
+  github_token:
+    description: 'GitHub token for authentication'
+    required: false
+    default: '${{ secrets.GITHUB_TOKEN }}'
+  prompt_file:
+    description: 'Prompt file for the AI to diagnose the failure'
+    required: false
+    default: './prompt.txt'
+  model:
+    description: 'AI model to use for diagnosis'
+    required: false
+    default: 'gpt-4o'
+  
+runs:
+  using: composite
+  steps:
+    - name: failure
+      run: |
+        echo "trigger build workflow failed"
+    - name: Checkout repository
+      uses: actions/checkout@v4
+    - name: Get Failed Logs
+      id: get_failed_logs
+      env:
+        GITHUB_TOKEN: ${{ inputs.github_token }}
+      run: |
+        echo "::error::ワークフロー失敗"
+        echo "branch: ${{ github.event.workflow_run.head_branch }}"
+
+        # ワークフローの実行IDを取得
+        RUN_ID=${{ github.event.workflow_run.id }}
+        echo "RUN_ID: $RUN_ID"
+
+        # ワークフロー情報を環境変数に保存
+        echo "WORKFLOW_NAME=${{ github.event.workflow_run.name }}" >> $GITHUB_ENV
+        echo "BRANCH_NAME=${{ github.event.workflow_run.head_branch }}" >> $GITHUB_ENV
+        echo "COMMIT_SHA=${{ github.event.workflow_run.head_sha }}" >> $GITHUB_ENV
+
+        # ジョブの一覧を取得
+        JOBS=$(gh api repos/${{ github.repository }}/actions/runs/${RUN_ID}/jobs --jq '.jobs')
+
+        # 失敗したジョブのログを取得
+        echo "FAILED_LOGS<<EOF" >> $GITHUB_ENV
+
+        for job in $(echo "$JOBS" | jq -r '.[] | select(.conclusion == "failure") | .id'); do
+          echo "=== Job ID: $job ===" >> $GITHUB_ENV
+          gh api repos/${{ github.repository }}/actions/jobs/${job}/logs >> $GITHUB_ENV 2>&1 || echo "ログの取得に失敗しました" >> $GITHUB_ENV
+          echo "" >> $GITHUB_ENV
+        done
+
+        echo "EOF" >> $GITHUB_ENV
+    - name: Run ai-interface
+      id: ai_interface
+      uses: actions/ai-interface@v1
+      with:
+        model: ${{ inputs.model }}
+        prompt_file: ${{ inputs.prompt_file }}
+    - name: Post AI Comments
+      id: post_ai_comments
+      shell: bash
+      env:
+        GITHUB_TOKEN: ${{ inputs.github_token }}
+      run: |
+        github-comment post -k ai-failure-diagnoser
